@@ -1,36 +1,36 @@
-\# WarungKu
+# WarungKu
 
-# Aplikasi mobile pencatatan keuangan dan stok untuk Kios 81A.
-
-# 
-
-# \## Tim (Kelompok 8)
-
-# \- Valery Dienda S. - Product Owner
-
-# \- Nasya Salsabil A. - Scrum Master
-
-# \- Dimas Fajar H. - Developer (Backend)
-
-# \- Priska Fiantika W. - Developer (UI/UX \& Frontend)
-
-# \- Aryo Anindito W. - Developer (Backend \& Database)
+Aplikasi mobile pencatatan keuangan dan stok untuk Kios 81A.
 
 # 
 
-# \## Link
+Tim (Kelompok 8)
 
-# \- Board Trello: https://trello.com/b/OUw0nGAD/warungku-sprint-1
+\- Valery Dienda S. - Product Owner
+
+\- Nasya Salsabil A. - Scrum Master
+
+\- Dimas Fajar H. - Developer (Backend)
+
+\- Priska Fiantika W. - Developer (UI/UX \& Frontend)
+
+\- Aryo Anindito W. - Developer (Backend \& Database)
 
 # 
 
-# \## Aturan kerja
+\# Link
 
-# \- Tidak ada commit langsung ke main, semua lewat Pull Request
+\- Board Trello: https://trello.com/b/OUw0nGAD/warungku-sprint-1
 
-# \- Nama branch: feature/US-x-nama-fitur
+# 
 
-# \- Pesan commit: "US-x: deskripsi singkat"
+\# Aturan kerja
 
-# \- Setiap PR direview minimal 1 anggota lain
+\- Tidak ada commit langsung ke main, semua lewat Pull Request
+
+\- Nama branch: feature/US-x-nama-fitur
+
+\- Pesan commit: "US-x: deskripsi singkat"
+
+\- Setiap PR direview minimal 1 anggota lain
 
