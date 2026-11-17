@@ -1,4 +1,4 @@
-# \# WarungKu
+\# WarungKu
 
 # Aplikasi mobile pencatatan keuangan dan stok untuk Kios 81A.
 
