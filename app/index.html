@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="id"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#2f5fd0"><title>WarungKu</title>
+<style>
+:root{--bg:#f4f6fb;--card:#fff;--tx:#111827;--mut:#6b7280;--pri:#2f5fd0;--bad:#c62828;--ok:#2e7d32;--bd:#d9dfec}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1524;--card:#18203a;--tx:#e8ecf8;--mut:#9aa6c4;--pri:#6f93f0;--bd:#2c3760;--bad:#ff8a80;--ok:#81c784}}
+*{box-sizing:border-box}body{margin:0;font:16px system-ui,sans-serif;background:var(--bg);color:var(--tx)}
+#root{max-width:640px;margin:0 auto;min-height:100vh;padding-bottom:76px}
+header{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--pri);color:#fff}
+header b{font-size:18px}header small{display:block;opacity:.85}
+main{padding:12px 16px}.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:12px;margin-bottom:10px}
+input,select{width:100%;padding:12px;border:1px solid var(--bd);border-radius:10px;background:var(--card);color:var(--tx);font-size:16px;margin:4px 0 10px}
+label{font-size:14px;color:var(--mut)}button{font:inherit;border:1px solid var(--bd);background:var(--card);color:var(--tx);padding:10px 14px;border-radius:10px;cursor:pointer}
+button.pri{background:var(--pri);color:#fff;border-color:var(--pri);width:100%;font-weight:600;padding:13px}button.bad{color:var(--bad)}button:disabled{opacity:.5}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px}.mut{color:var(--mut);font-size:14px}.err{color:var(--bad);min-height:20px;margin:6px 0;font-size:14px}.ok{color:var(--ok)}
+.item{cursor:pointer}.item:active{background:var(--bg)}.low{color:var(--bad)}.tag{font-size:12px;border:1px solid var(--bd);border-radius:6px;padding:1px 6px;color:var(--mut)}
+nav{position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:center;background:var(--card);border-top:1px solid var(--bd)}
+nav div{display:flex;width:100%;max-width:640px}nav button{flex:1;border:0;border-radius:0;padding:16px 4px;background:none}nav button.on{color:var(--pri);font-weight:700;border-top:3px solid var(--pri)}
+.login{padding:48px 24px}.login h1{color:var(--pri);margin:0 0 4px}.qty{display:flex;align-items:center;gap:8px}.qty button{padding:4px 12px}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center;z-index:5}
+.sheet{background:var(--bg);width:100%;max-width:640px;max-height:92vh;overflow:auto;border-radius:16px 16px 0 0;padding:16px}
+.big{font-size:22px;font-weight:700}
+</style></head><body><div id="root"></div>
+<script>
+const $=s=>document.querySelector(s),esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const rp=n=>'Rp '+Number(n).toLocaleString('id-ID');
+const S={token:localStorage.getItem('wk_token'),user:JSON.parse(localStorage.getItem('wk_user')||'null'),tab:'kasir',products:[],cart:{},q:'',msg:'',receipt:null};
+function setSession(t,u){S.token=t;S.user=u;t?(localStorage.setItem('wk_token',t),localStorage.setItem('wk_user',JSON.stringify(u))):(localStorage.removeItem('wk_token'),localStorage.removeItem('wk_user'))}
+async function api(path,method='GET',body){
+  const r=await fetch('/api'+path,{method,headers:{'Content-Type':'application/json',...(S.token?{Authorization:'Bearer '+S.token}:{})},body:body?JSON.stringify(body):undefined});
+  const d=await r.json().catch(()=>({}));
+  if(r.status===401&&path!=='/login'){setSession(null,null);render();throw new Error('Sesi berakhir, silakan login lagi')}
+  if(!r.ok)throw new Error(d.error||'Terjadi kesalahan');return d}
+async function loadProducts(){S.products=await api('/products')}
+const isOwner=()=>S.user&&S.user.role==='pemilik';
+
+/* ---------- US-1: login dan hak akses ---------- */
+function loginView(){
+  $('#root').innerHTML=`<div class="login"><h1>WarungKu</h1><p class="mut">Catat penjualan dan stok kios dengan mudah</p>
+  <form id="fLogin"><label>Username</label><input name="u" autocomplete="username" required>
+  <label>Password</label><input name="p" type="password" autocomplete="current-password" required>
+  <div class="err" id="err"></div><button class="pri">Masuk</button></form></div>`;
+  $('#fLogin').onsubmit=async e=>{e.preventDefault();const f=e.target;
+    try{const d=await api('/login','POST',{username:f.u.value,password:f.p.value});setSession(d.token,d.user);S.tab='kasir';S.cart={};await loadProducts();render()}
+    catch(x){$('#err').textContent=x.message}}}
+function render(){S.user?appView():loginView()}
+function appView(){
+  const tabs=[['kasir','Kasir'],...(isOwner()?[['produk','Barang'],['laporan','Laporan']]:[])];
+  $('#root').innerHTML=`<header><div><b>WarungKu</b><small>${esc(S.user.name)} (${esc(S.user.role)})</small></div><button id="out">Keluar</button></header>
+  <main id="main"></main><nav><div>${tabs.map(t=>`<button data-tab="${t[0]}" class="${S.tab===t[0]?'on':''}">${t[1]}</button>`).join('')}</div></nav><div id="modal"></div>`;
+  $('#out').onclick=async()=>{try{await api('/logout','POST')}catch(e){}setSession(null,null);render()};
+  document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{S.tab=b.dataset.tab;S.q='';S.msg='';appView()});
+  ({kasir:kasirView,produk:produkView,laporan:laporanView})[S.tab]()}
+function laporanView(){$('#main').innerHTML='<div class="card"><b>Laporan</b><p class="mut">Menu ini hanya terlihat oleh pemilik. Laporan penjualan dan laba tersedia mulai Sprint 2.</p></div>';
+  api('/reports').catch(()=>{})}
+
+/* ---------- US-3 dan US-4: kasir ---------- */
+function kasirView(){
+  $('#main').innerHTML=`<input id="q" placeholder="Cari barang..." value="${esc(S.q)}"><div id="plist"></div>
+  <div class="card"><b>Keranjang</b><div id="cart"></div></div>`;
+  $('#q').oninput=e=>{S.q=e.target.value;plist()};plist();cartView()}
+function plist(){
+  const k=S.q.toLowerCase(),rows=S.products.filter(p=>p.active&&p.name.toLowerCase().includes(k));
+  $('#plist').innerHTML=rows.length?rows.map(p=>`<div class="card item" data-add="${p.id}"><div class="row"><b>${esc(p.name)}</b><b>${rp(p.sell_price)}</b></div>
+   <div class="mut ${p.stock===0?'low':''}">Stok: ${p.stock} ${esc(p.unit)}${p.stock===0?' (habis)':''}</div></div>`).join(''):'<p class="mut">Belum ada barang yang cocok.</p>';
+  document.querySelectorAll('[data-add]').forEach(el=>el.onclick=()=>{const id=+el.dataset.add,p=S.products.find(x=>x.id===id);
+    if((S.cart[id]||0)>=p.stock){S.msg=`Stok ${p.name} hanya ${p.stock}`;return cartView()}
+    S.msg='';S.cart[id]=(S.cart[id]||0)+1;cartView()})}
+const cartTotal=()=>Object.entries(S.cart).reduce((t,[id,q])=>t+(S.products.find(p=>p.id==id)?.sell_price||0)*q,0);
+function cartView(){
+  const ids=Object.keys(S.cart);
+  if(!ids.length){$('#cart').innerHTML=`<p class="mut">Ketuk barang untuk menambahkan.</p><div class="err">${esc(S.msg)}</div>`;return}
+  $('#cart').innerHTML=ids.map(id=>{const p=S.products.find(x=>x.id==id);return `<div class="row" style="margin:8px 0"><div>${esc(p.name)}<div class="mut">${rp(p.sell_price)} x ${S.cart[id]} = ${rp(p.sell_price*S.cart[id])}</div></div>
+   <div class="qty"><button data-dec="${id}">-</button><b>${S.cart[id]}</b><button data-inc="${id}">+</button><button class="bad" data-rm="${id}">x</button></div></div>`}).join('')+
+  `<hr><div class="row"><span>Total</span><span class="big">${rp(cartTotal())}</span></div>
+   <label>Uang bayar</label><input id="paid" inputmode="numeric" placeholder="0"><div class="row"><span>Kembalian</span><b id="chg">-</b></div>
+   <div class="err" id="cerr">${esc(S.msg)}</div><button class="pri" id="save">Simpan transaksi</button>`;
+  const up=()=>{const v=parseInt($('#paid').value||'0',10),t=cartTotal();$('#chg').textContent=v>=t?rp(v-t):'Uang kurang '+rp(t-v)};
+  $('#paid').oninput=up;
+  document.querySelectorAll('[data-inc]').forEach(b=>b.onclick=()=>{const id=b.dataset.inc,p=S.products.find(x=>x.id==id);
+    if(S.cart[id]>=p.stock){S.msg=`Stok ${p.name} hanya ${p.stock}`}else{S.msg='';S.cart[id]++}cartView()});
+  document.querySelectorAll('[data-dec]').forEach(b=>b.onclick=()=>{const id=b.dataset.dec;S.cart[id]>1?S.cart[id]--:delete S.cart[id];S.msg='';cartView()});
+  document.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{delete S.cart[b.dataset.rm];S.msg='';cartView()});
+  $('#save').onclick=async()=>{const btn=$('#save');btn.disabled=true;
+    try{const d=await api('/sales','POST',{items:Object.entries(S.cart).map(([id,qty])=>({product_id:+id,qty})),paid:parseInt($('#paid').value||'0',10)});
+      S.cart={};S.msg='';await loadProducts();receipt(d);kasirView()}
+    catch(x){S.msg=x.message;try{await loadProducts()}catch(e){}plist();cartView()}}}
+function receipt(d){
+  $('#modal').innerHTML=`<div class="modal"><div class="sheet"><h2 class="ok">Transaksi tersimpan</h2>
+  <div class="mut">#${d.id} - ${esc(d.created_at.replace('T',' '))} - Kasir: ${esc(d.cashier_name)}</div>
+  ${d.items.map(i=>`<div class="row" style="margin:6px 0"><span>${esc(i.name)} x${i.qty}</span><span>${rp(i.sell_price*i.qty)}</span></div>`).join('')}<hr>
+  <div class="row"><span>Total</span><b>${rp(d.total)}</b></div><div class="row"><span>Bayar</span><span>${rp(d.paid)}</span></div>
+  <div class="row"><span>Kembalian</span><b class="big">${rp(d.change_amount)}</b></div><br><button class="pri" id="done">Transaksi baru</button></div></div>`;
+  $('#done').onclick=()=>$('#modal').innerHTML=''}
+
+/* ---------- US-2: kelola barang (khusus pemilik) ---------- */
+async function produkView(){
+  $('#main').innerHTML=`<div class="row"><input id="q" placeholder="Cari barang..." value="${esc(S.q)}" style="margin:0"><button class="pri" id="add" style="width:auto;white-space:nowrap">+ Barang</button></div><br><div id="plist"></div>`;
+  $('#q').oninput=e=>{S.q=e.target.value;plistOwner()};$('#add').onclick=()=>productForm();
+  try{await loadProducts()}catch(e){}plistOwner()}
+function plistOwner(){
+  const k=S.q.toLowerCase(),rows=S.products.filter(p=>p.name.toLowerCase().includes(k));
+  $('#plist').innerHTML=rows.length?rows.map(p=>`<div class="card"><div class="row"><b>${esc(p.name)}</b>${p.active?'':'<span class="tag">nonaktif</span>'}</div>
+   <div class="mut">Beli ${rp(p.buy_price)} - Jual ${rp(p.sell_price)} - Stok ${p.stock} ${esc(p.unit)}</div>
+   <div class="row" style="margin-top:8px;justify-content:flex-start"><button data-edit="${p.id}">Ubah</button><button data-tog="${p.id}">${p.active?'Nonaktifkan':'Aktifkan'}</button><button class="bad" data-del="${p.id}">Hapus</button></div></div>`).join(''):'<p class="mut">Belum ada barang. Tekan "+ Barang".</p>';
+  document.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>productForm(S.products.find(p=>p.id==b.dataset.edit)));
+  document.querySelectorAll('[data-tog]').forEach(b=>b.onclick=async()=>{const p=S.products.find(x=>x.id==b.dataset.tog);
+    try{await api('/products/'+p.id,'PUT',{active:!p.active});await loadProducts();plistOwner()}catch(x){alert(x.message)}});
+  document.querySelectorAll('[data-del]').forEach(b=>b.onclick=async()=>{const p=S.products.find(x=>x.id==b.dataset.del);
+    if(!confirm(`Hapus "${p.name}" secara permanen?`))return;
+    try{await api('/products/'+p.id,'DELETE');await loadProducts();plistOwner()}catch(x){alert(x.message)}})}
+function productForm(p){
+  const v=(k,d='')=>p?esc(p[k]):d;
+  $('#modal').innerHTML=`<div class="modal"><div class="sheet"><h3>${p?'Ubah':'Tambah'} barang</h3><form id="fp">
+  <label>Nama barang</label><input name="name" value="${v('name')}" required>
+  <label>Harga beli (Rp)</label><input name="buy_price" inputmode="numeric" value="${v('buy_price')}" required>
+  <label>Harga jual (Rp)</label><input name="sell_price" inputmode="numeric" value="${v('sell_price')}" required>
+  <label>Satuan</label><input name="unit" value="${v('unit','pcs')}">
+  <label>${p?'Stok':'Stok awal'}</label><input name="stock" inputmode="numeric" value="${v('stock')}" required>
+  <div class="err" id="perr"></div><button class="pri">Simpan</button><br><br><button type="button" id="cancel" style="width:100%">Batal</button></form></div></div>`;
+  $('#cancel').onclick=()=>$('#modal').innerHTML='';
+  $('#fp').onsubmit=async e=>{e.preventDefault();const f=e.target,body={name:f.name.value,buy_price:f.buy_price.value,sell_price:f.sell_price.value,unit:f.unit.value,stock:f.stock.value};
+    try{await api(p?'/products/'+p.id:'/products',p?'PUT':'POST',body);await loadProducts();$('#modal').innerHTML='';plistOwner()}catch(x){$('#perr').textContent=x.message}}}
+
+(async()=>{if(S.user){try{await loadProducts()}catch(e){}}render()})();
+</script></body></html>
