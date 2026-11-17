@@ -1,0 +1,50 @@
+# Sistem operasi
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor / IDE
+.vscode/
+.idea/
+*.iml
+*.swp
+
+# Rahasia (JANGAN PERNAH di-commit)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.jks
+*.keystore
+serviceAccountKey.json
+local.properties
+
+# Log dan file sementara
+*.log
+logs/
+tmp/
+temp/
+
+# Dependency
+node_modules/
+vendor/
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Hasil build
+build/
+dist/
+out/
+.gradle/
+.dart_tool/
+.next/
+Pods/
+*.apk
+*.aab
+
+# Database lokal
+*.sqlite
+*.db
